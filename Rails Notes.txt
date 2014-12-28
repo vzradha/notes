@@ -1,0 +1,202 @@
+Create a new app
+1.rails _4.2.0.rc3_ new <app_name>
+2. Edit the Gemfile to use the versions required for the app
+3. run bundle install
+4. git init, git add -A, git commit -m "Init repo"
+
+Create MVC with scaffolding < Scaffolding creates models,views,helpers etc)
+1. rails generate scaffold <model name - User> name:string email:string
+2. Migrate db with rake
+	bundle exec rake db:migrate
+
+Create Model
+1.rails generate model User name:String email:String
+      invoke  active_record
+      create    db/migrate/20141226025124_create_users.rb
+      create    app/models/user.rb
+      invoke    test_unit
+      create      test/models/user_test.rb
+      create      test/fixtures/users.yml	
+
+2. Migrate db with rake
+	bundle exec rake db:migrate
+
+3. Rollback db
+	bundle exec rake db:rollback   
+	bundle exec rake db:migrate VERSION=0   
+	
+	
+4. Sandbox rails console (Opens the dev env.. any changes to db will be rolled back on exit)
+	rails c --sandbox
+	Loading development environment in sandbox (Rails 4.2.0.rc3)
+	Any modifications you make will be rolled back on exit
+	
+	-----IF MODEL/TEST IS CHANGED, ENSURE TO RELOAD rails console ------
+	Use the command below on the command line
+	reload!
+	
+5. Reset the db to start fresh
+
+	rake db:migrate:reset
+
+	
+Creating indexes in the database( Done using  rails generate migration )
+
+1.	rails generate migration add_index_to_users_email
+      invoke  active_record
+      create    db/migrate/20141226061404_add_index_to_users_email.rb
+      
+      
+IMPLEMENTING SECURE PASSWORDS
+
+1.	add has_secure_password to the model that requires password hashing
+2.  -has_secure_password provides password_digest hash
+	-password and password_confirmation virtual attributes
+	-authenticate method that returns when pass is correct and false otherwise
+	
+3.  generate the password_digest database migration to store the hash in the database
+		rails generate migration add_password_digest_to_users password_digest:string
+      invoke  active_record
+      create    db/migrate/20141226075202_add_password_digest_to_users.rb
+		rake db:migrate
+		== 20141226075202 AddPasswordDigestToUsers: migrating =========================
+		-- add_column(:users, :password_digest, :string)
+   		-> 0.0013s
+		== 20141226075202 AddPasswordDigestToUsers: migrated (0.0016s) ================
+		
+		
+4.	To hash the password use the below gem bcrypt	
+	gem 'bcrypt','3.1.7'
+
+
+5. Add validate method to model
+	validates :password, length: { minimum: 6 }
+
+
+
+Create Controller
+1.rails generate controller Users new
+      create  app/controllers/users_controller.rb
+       route  get 'users/new'
+      invoke  erb
+      create    app/views/users
+      create    app/views/users/new.html.erb
+      invoke  test_unit
+      create    test/controllers/users_controller_test.rb
+      invoke  helper
+      create    app/helpers/users_helper.rb
+      invoke    test_unit
+      invoke  assets
+      invoke    coffee
+      create      app/assets/javascripts/users.coffee
+      invoke    scss
+      create      app/assets/stylesheets/users.css.scss
+
+Destory/undo changes across the app
+
+	rails destroy controller StaticPages home help or
+	rails destroy model User
+
+Undo db migration
+	- to go back one single step
+		bundle exec rake db:rollback
+	- to reinitialize
+		bundle exec rake db:migrate VERSION=0	
+
+Rails Integration test
+	-rails generate integration_test <test_template_name>
+Running a Integration test
+	-rake test:integration
+
+
+Rails uses Sass and Bootstrap uses LESS for CSS
+-Variables in Sass defined by $
+-Variables in BootStrap defined by #
+
+DEBUGGING
+
+1. Rails has inbuilt debugger called byebug. To initiate byebug in CONTROLLER
+
+	insert "debugger" in the code
+2. The Rails server will go in to a console mode with byebug prompt
+
+[1, 10] in /home/vzradha/workspace/sample_app/app/controllers/users_controller.rb
+    1: class UsersController < ApplicationController
+    2:   
+    3:   def show
+    4: 		@user = User.find(params[:id])
+    5: 		debugger
+=>  6: 	end	
+    7: 
+    8:   def new
+    9:   end
+   10: end
+(byebug) @user.name
+"Valli Radha"
+(byebug) @user.email
+"vzradha@gmail.com"
+(byebug) params[:id]
+"1"
+(byebug) params[:name]
+nil
+(byebug) params[:email]
+nil
+(byebug) params[:id]
+"1"
+(byebug) 
+
+
+
+Chapter 8 - LogIn/LogOut
+
+when displaying flash error message for invalid user/pass combo, the flash still stays on for one more request.
+The is due to "render 'new'" redirect is not counted as a request. 
+
+An integration test can capture these errors. The basic sequence
+Visit the login path.
+	get login_path
+Verify that the new sessions form renders properly.
+	assert_template 'sessions/new'
+Post to the sessions path with an invalid params hash.
+	post login_path, session: { email: "", password: ""}
+Verify that the new sessions form gets re-rendered and that a flash message appears.
+	assert_template 'sessions/new'
+  	assert_not flash.empty?
+Visit another page (such as the Home page).
+	get root_path
+Verify that the flash message doesn’t appear on the new page.
+	assert flash.empty?
+
+To run bundle exec rake test on one file
+	bundle exec rake test TEST=test/integration/users_login_test.rb
+To run rake test on one specific test
+	rake test TEST=test/integration/users_login_test.rb TESTOPTS="--name test_<test_name>"
+		EG:	TESTOPTS="--name test_login_with_valid_information"
+
+
+
+
+
+
+
+
+
+Rails Install on ubuntu
+http://railsapps.github.io/installrubyonrails-ubuntu.html
+
+Rails online API doc
+http://ruby-doc.org/core-2.1.5
+
+Asset pipeline
+http://guides.rubyonrails.org/asset_pipeline.html
+
+Bootstrap-less variables
+http://getbootstrap.com/customize/#less-variables
+
+Zurb Foundation
+http://railsapps.github.io/rails-foundation.html
+
+Cool Link
+http://lmgtfy.com/?q=rails+enforce+password+strength
+
+ 

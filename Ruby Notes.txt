@@ -1,0 +1,44 @@
+Ruby Notes
+- To remove any object from irb use
+	Object.send(:remove_const, :<class_name>)
+- Verify by 
+	<class_name>.public_instance_methods
+	result should be 
+	NameError: uninitialized const
+
+- calling ruby scripts in console
+
+require './<ruby_file_name_without_extension>' eg : user.rb will be called as require './user'
+
+- example class(need to know)
+
+2.1.5 :248 > class User
+2.1.5 :249?>   attr_accessor :name, :email
+2.1.5 :250?>   def init(attributes = {})
+2.1.5 :251?>     @name = attributes[:name]
+2.1.5 :252?>     @email = attributes[:email]
+2.1.5 :253?>     end
+2.1.5 :254?>   def formatted_email
+2.1.5 :255?>     "#{@name} < #{@email}>"
+2.1.5 :256?>     end
+2.1.5 :257?>   end
+ => :formatted_email 
+2.1.5 :258 > ex = User.new
+ => #<User:0x007f4ead908708> 
+2.1.5 :259 > ex.name
+ => nil 
+2.1.5 :260 > ex.name = "example User"
+ => "example User" 
+2.1.5 :261 > ex.email = "user@user.com"
+ => "user@user.com" 
+2.1.5 :262 > ex.formatted_email
+ => "example User < user@user.com>" 
+2.1.5 :263 > 
+2.1.5 :002 > user = User.new(name: "Valli Radha", email: "vzradha@gmail.com")
+ => #<User:0x007f4eaca85668 @name="Valli Radha", @email="vzradha@gmail.com"> 
+2.1.5 :003 > user.formatted_email
+ => "Valli Radha < vzradha@gmail.com>" 
+2.1.5 :004 > user.formatted_email
+ => "Valli Radha < vzradha@gmail.com>"
+
+
