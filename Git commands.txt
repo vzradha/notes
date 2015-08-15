@@ -42,3 +42,18 @@ To add the repo on the git server do:
 		git remote add origin git@aztecpop:/opt/git/sample_app.git
 	Push the changes to git server
 		git push -u origin --all or git push origin <branch_name>
+
+
+
+Git Patch
+
+1. Clone if a new get repo
+2. Create a branch git checkout -b <branch_name>
+3. Change files and do commits (note: do not merge to master)
+4. Do git log —pretty=oneline -3 to show the last commit
+5. While still in branch do git format-patch master --stdout > <patch_name>.patch
+Applying the patch
+
+1. In master branch do git apply --stat <patch_name>.patch to see the stats of the file 
+2. To check if the patch is not harmful do git apply —-check <patch_name>.patch
+3. If no errors can apply the patch cleanly do git am —signoff <  <patch_name>.patch
