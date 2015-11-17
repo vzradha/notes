@@ -57,3 +57,32 @@ Applying the patch
 1. In master branch do git apply --stat <patch_name>.patch to see the stats of the file 
 2. To check if the patch is not harmful do git apply —-check <patch_name>.patch
 3. If no errors can apply the patch cleanly do git am —signoff <  <patch_name>.patch
+
+
+Git push to multiple remotes
+1. Add the remotes individually
+	git remote add origin git@aztecpop:/opt/git/depot.git
+2. Push changes to origin
+	git push -u origin master
+3. Edit the git config on the repo
+	git config -e
+
+4. Add the following. remote origin will be added automatically when pushing to one of the remotes. Edit the config to add a merged push as seen under [remote "origin"]
+	
+[remote "Github"]
+	url = git@github.com:vzradha/depot.git
+	fetch = +refs/heads/*:refs/remotes/GitHub/*
+
+[remote "aztecpop"]
+	url = git@aztecpop:/opt/git/depot.git
+	fetch = +refs/heads/*:refs/remotes/*
+
+[remote "origin"]
+	url = git@aztecpop:/opt/git/depot.git
+	url = git@github.com:vzradha/depot.git
+	fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+	remote = origin
+	merge = refs/heads/master
+
+	
