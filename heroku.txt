@@ -1,0 +1,15 @@
+1. On the app dir run
+	heroku create - to create the heroku app and its git url
+2. Add the heroku git remote
+	heroku git:remote -a <app name >
+	heroku git:remote -a boiling-fortress-7743
+3. push master to heroku remote
+	git push heroku master
+
+4. Heroku does not support sqllite, modify the Gemfile to add pg gem
+	gem 'pg', '0.17.1'
+5. Run bundle install, commit the changes to git.
+6. push changes to heroku remote
+	git push heroku master
+7. check heroku logs -t to see logs
+
