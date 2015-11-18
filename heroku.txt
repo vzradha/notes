@@ -11,5 +11,8 @@
 5. Run bundle install, commit the changes to git.
 6. push changes to heroku remote
 	git push heroku master
-7. check heroku logs -t to see logs
-
+7. To run a command on heroku, do a db migration on heroku
+	heroku run rake db:migrate
+	heroku run rake routes
+8.check heroku logs -t to see logs
+8. 
