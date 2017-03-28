@@ -1,0 +1,127 @@
+-DynamoDB Notes
+ -- keywords: fast and flexible NoSQL, that need single millisecond latency at any scale
+ --supports document and key-value data models
+ --used in gaming, ad-tech,IoT, mobile and web
+ --spread across 3 distinct data center
+ -Eventual Consistent Reads
+ -->Consistency across all copies is reached within a second, means data is sync after a short time
+ -Strong Consistent Reads
+ --> returns the most up-to-date data reflecting all prior writes ops that were successful.
+ --> Reads Returns a result that reflects all writes received a successful response prior to the read.
+
+ -Tables, Items(row), Attributes(col)
+ -supports 32 levels of nesting within an Item
+ - 2 types of primary keys -
+ - single partiton key( unique ID)- MUST be String,number or binary.was called hash key or partition key or Primary key. Dynamo uses the value of partition key to input to internal hash function, the output of which determines where the item is stored physically in dynamo.
+ - Composite (uniq ID and data range)- partition key & sort key (hash attirb and range attrib)
+ --> can have multiple primary keys provided the sort keys are different. Apart from multiple primary keys, the table is schemaless
+
+Partition Calculation:
+By capacity: (Total RCU/3000) + (Total WCU/1000)
+By Size: Total size/10GB
+Total partitions: CEILING(MAX(Capacity, Size))
+
+Example : Table Size: 8GB ,5000 RCU , 500 WCU
+Capacity: (5000/3000) + (500/1000) = 2.17
+Size: 8GB/10GB = 0.8GB
+Total # of partitions: CEILING(MAX(2.17,0.8)) = 3 ( CEILING = Rounded)
+
+
+--If sustained throughput is > RCU or WCU /partition -> throttling occurs --> To resolve INCREASE THE PROVISIONED THROUGHPUT
+
+
+
+
+ -Indexes (5GSI and 5LSI per table)
+ -- Local secondary index - same partition key and diff sort key. Can only be created while creating the table. CANNOT BE MODIFIED
+ --Global secondary index - diff part key and diff sort key other than the primary or partition key of the table, can be created when creating the table or added later
+ -- GSI can have their own provision throughput
+ --Projected Attributes: when an index is created, the partition key and its related attributes are projected or copied to the index.Indexes are queried same way as a table. Can be KEYS_ONLY,INCLUDE,ALL
+
+LSI/GSI differences:
+- LSI attached to specific partition key
+- items that have the same partition key share the partition in the dynamo,LSI items are stored together. queries the same part key with diff sort values
+- LSI limits total size of tables & indexes to 10GB per partition key for data co-location
+- Writes to LSI indexed tables are all affected
+-LSI indexes not projetced(which is copying to a separate index )
+
+-GSI spans all partition keys
+-Not restricted to common parititon key
+-GSI has no restrictions and does not enforce data-co-location
+-Updates/writes to GSI are eventually consistent, meaning they will be updated within a second
+-GSI indexes are projected.
+
+ --DynamoDB streams - captures data modification events to the tables. Used mostly in monitoring tables. Stored for max 24 hrs
+ -->captures image of new item and its attrib when item is added.
+ -->captures before and after when the item is updated
+ -->captures entire image before an item is deleted
+
+ API items
+-control plane --> CreateTable,DescribeTable,ListTables,UpdateTable,DeleteTable
+-Data plane --> PutItem(single item),BatchWriteItem(upto 25 items. can also be used to delete multiple items)
+-Reading data --> GetItem,BatchGetItem(retrieve upto 100 items), Query,scan
+-Update data --> UpdateItem (updates any time attrib. used in atomic counters)
+-Delete data --> DeleteItem,BatchWriteItem
+-Streams --> ListStreams,DescribeStreams,GetShardIterator(is a data structure used to retrieve records from stream), GetRecords(retrive records given the sharditerator)
+
+- Supports Conditional opertions : Bool,comparison,logical
+- Also supports expressions for key conditions - use KeyConditionExpression
+ Query -> the operation that finds the items given the primary key and attrib values.Optionally provide sort key and comparison operator to refine results
+ --> by default returns all data but use ProjectionExpression to return certain values
+ --> numbers are returned in ascending order for string by ASCII char values. to reverse it to descending set ScanIndexForward to false
+
+ Scan -> dumps entire table. then refines results by removing the unwanted data attrib
+ - how does scan work?-->works as an iterator. once the aggregate size reaches 1MB from the scan API request, the req is terminated and results returned along with LastEvaluatedKey to perform subsequent operations
+ - Always prefer Query over Scan.
+
+
+- Provisioned throughput calculations
+
+--> Read provisioned throughput -->increments of 4KB, eventual consistent reads 2reads/sec, strong - 1 read/sec
+Formula to cal : ((size of item rounded to nearest 4KB chunk)/4KB) * #of read items/sec = read throughput
+Divide the read throughput by 2 for eventual , or leave as is for strong
+--> GSI for Read provisioned is 50% of table read provision
+
+--> Write Provisioned --> increments of 1KB, All writes are 1write/sec
+
+size of item rounded 1KB chunk * #of write items = write throughput
+
+- Estimating Storage for GSI : its a sum of size in bytes of base table primary key(partkey&sortkey)+size in bytes of indexkeyattrib+bytes of proj atrib+100 bytes overhead per index
+-->Essentially its avg size of item in the index*number of items in the base table
+
+Exceeding provision throughput --> 400 HTTP code- ProvisionedThroughputExceededException
+-> occurs when max allowed provisioned throughput is exceeded for a table or for one or more GSI (global secondary index)
+
+
+WebIdentity Providers
+
+1. User authenticates with ID provider
+2. A token is passed from the provider
+3. Code calls AssumeRoleWithWebIdentity API and provides temp credentials using STS (Secure Token Service)
+4. App can now access DynamoDB b/w 15 mins to 1 hr(default)
+
+More Notes:
+- Conditional Writes: Are Idempotent-> meaning no further effect on the item the first times its updated.
+- Atomic Counters: use UpdateItem to increment or decrement the value of existing object. Are not idempotent, meaning the value is updated no matter the result of previous write
+- BatchGetItem(BGI): while reading multiple items, BGI can get upto 1MB in a single request and can also request multiple tables
+
+
+FAQ Notes:
+
+- Read consistency represents the timing and manner in the which successful write or update of data is reflected in a subsequent read operation of that item. 2 types eventual and strong read consistencies
+- Runs exclusively on SSD
+- Evntual read is default. To make it strong - set the ConsistentRead=true
+
+Security:
+- restrict access to expensive query operations with limiting perms to only projected attribs using "dynamodb:Attributes"
+- use Allow whitelisting the attribs that can be returned
+- use Fine Grained Access Ctrl to prevent users from adding invalid data
+- FGAC uses STS(Simple Token Service)
+
+
+TTL:
+- TTL allows for setting a specific timestamp to delete expried items from the table
+- Helps reduce storage costs
+- is in epoch time
+- TTL is specified on the overview tab, use a attrib as TTL value
+- only deletes item level.entire table cannot be deleted using TTL

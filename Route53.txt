@@ -1,0 +1,721 @@
+﻿EC2
+-Autoscaling
+-Placement Groups
+-IAM roles and SG
+-types of instances and their uses(compute,iops etc)
+-Best practice/faqs
+
+
+IAM
+-roles
+-users
+-groups
+-Securing accounts
+
+S3
+- Permissions
+-policies
+-cors
+-faqs/best practice
+-storage gateways
+-Lifecycle
+
+VPC
+-Custom VPC
+-Subnets
+-route tables
+-NACL
+-Bastion hosts
+-NAT instances and GW
+-Internet gateway
+-VPN
+-DirectConnect
+-faqs/best practice
+-Egress only  networks
+
+
+Route53
+-types of records
+-types of implmentation
+-faqs/best practice
+
+
+
+RDS
+-Backups
+-MultiAZ
+-Readreplica
+-dynamodb
+-redshift
+-elasticcache
+-Aurora
+-faqs/best practice
+
+SQS
+SNS
+SWF
+Elastic transcoder
+cloudwatch -faqs/best practice
+ELB - faqs/best practice
+
+
+reInvent videos
+
+
+
+http://ozaws.com/2015/09/17/aws-professional-solution-architect-certification-tips/ - esp the links
+
+=====Whitepapers to read later=========
+
+https://d0.awsstatic.com/whitepapers/aws-securing-data-at-rest-with-encryption.pdf
+
+
+Regions and Endpoints
+http://docs.aws.amazon.com/general/latest/gr/rande.html
+https://aws.amazon.com/about-aws/global-infrastructure/regional-product-services/
+
+
+ARN Format
+
+http://docs.aws.amazon.com/general/latest/gr/aws-arns-and-namespaces.html?shortFooter=true#arns-paths
+arn:partition:service:region:account-id:resource
+arn:partition:service:region:account-id:resourcetype/resource
+arn:partition:service:region:account-ds:resourcetype:resource
+
+
+-partition: for std AWS regions its aws
+-service: the service name that identifies the product( IAM,s3,route53,aws artifact)
+-region: aws regions, some resources do not need a region like global ones(s3,dynamoDB cfn etc) region can be omitted
+-account: id of aws account
+-resourcetype/resource or resourcetype:resource - type
+
+=============================================================================================================================================================================
+
+JSON Policy format
+- Version -> Policy version dates: 2012-10-17(new), 2008-10-17(old)
+- Id
+- Statement
+-- Sid
+-- Effect
+-- Principal - is the user,Aws account,Aws Service
+-- Action
+-- Resource
+-- Condition
+
+
+
+=============================================================================================================================================================================
+
+
+
+
+Route53 types of DNS record types supported:
+
+- A (address record)
+-AAAA (IPv6 addr record)
+-CNAME (Canonical name)
+-MX (mail exchange)
+-NATPR (Name Authority Pointer Record)
+-NS (Name Server Record)
+-PTR(Pointer record)
+-SOA (Start of Authority)
+-SPF (Sender Policy Framework)
+-SRV (Service Locator)
+-TXT (text record)
+-Alias Record - Used to map resource record to hosted zone's ELB or CDN or EBean or S3
+
+Route53 Types of Routing policies:
+
+- Simple -> a simple round robin DNS resolution based on the NS
+- Weighted -> also a round robin but allocates weights in %.
+- Latency -> LBR(latency based routing) resolves based on end users nearest location
+- Geolocation -> resolves based on location. helps customize content ( eg. lang/currency). Always create a Global record, when in cases the geo dns is not responding/or not included in the record set
+- Failover -> used in DR situations.no need to setup health checks, DNS fails over to secondary. Need to set primary and secondary.can use ELB endpoints
+
+- Health checks can be associated with SOA and NS records ONLY
+
+Q. Can I use the same policy to manage routing for more than one DNS name?
+
+Yes. You can reuse a policy to manage more than one DNS name in one of two ways. First, you can create additional policy records using the policy. Note that there is an additional charge for using this method, because you are billed for each policy record that you create.
+
+The second method is to create one policy record using the policy, and then for each additional DNS name that you want to manage using the policy, you create a standard CNAME record pointing at the DNS name of the policy record that you created. For example, if you create a policy record for example.com, you can then create DNS records for www.example.com, blog.example.com, and www.example.net with a CNAME value of example.com for each record. Note that this method is not possible for records at the zone apex, such as example.net, example.org, or example.co.uk (without www or another subdomain in front of the domain name). For records at the zone apex, you must create a policy record using your traffic policy.
+
+
+- CANNOT CREATE ALIAS RECORDS POINTING TO DNS MANAGED BY TRAFFIC POLICY
+
+- DNS failover for ELB - Use the Alias record name with Eval Target health...you do not check the ELB status itself.To get metrics of the checks
+ -->Use CloudWatch for ELB
+ -->Use the CNAME provided by the ELB (e.g. elb-example-123456678.us-west-2.elb.amazonaws.com)
+
+- When S3 is used for an Alias record the health is checked on the S3 bucket location in the AWS region, does not check for existence or valid content
+
+- Route53 allows CloudWatch metrics based DNS failover (like CPU/memory/network)
+ --> endpoints in the VPC that are private only
+
+- For IPv6 Domain name health checks -  ALWAYS USE IP ADDR AS ENDPOINT
+
+
+-Route53 has a security feature that prevents internal DNS being read be external sources. The work around is to create a EC2 hosted DNS instance that does zone transfers from the internal DNS, and allows it'self to be queried by external servers.
+
+=============================================================================================================================================================================
+
+
+
+
+
+NACL BAsics
+- Are stateless - separate inbound/outbound rules, responses to inbound traffic are subject to outbound rules and vice versa
+-Default custom ACL denies all in/out traffic
+-subnet must be associated with ACL, or default ACL is used for the subnet
+-1:many ACL's for subnet, but subnet can have only one ACL at a time
+- ACL applied by number order, lowest number eval'ed first
+- Highest number of ACL's - 32766
+- Rules can also be associated with a security group
+
+NACL Ephemeral ports
+
+Linux(including AMI) - 32768 to 61000
+ELB - 1024 to 65535
+Windows 2003 - 1025 to 5000
+Windows 2008 - 49152 to 65535
+NAT GW - 1024 to 65535
+
+===========================================================================================================================================================================
+
+AWS Service Limits
+
+- EC2 instances per region is 20 (soft limit)
+- CF is 200 stacks
+-App ELB /region - 20
+-Classic ELB/region - 20
+-IAM Groups -100
+-IAM instance profiles - 100
+-IAM Roles 250
+-IAM users - 5000
+-R53 Hosted zones - 500
+-R53 record sets/hosted zone - 10,000
+-R53 VPC with private hosted zone - 100
+-SNS topics - 100,000
+-S3 Buckets - 100 per account
+-Auto Scaling
+--Launch Config - 100
+--AutoScaling Groups - 20
+--SNS topics/ ASG - 50
+--LB/ASG - 50
+
+VPC Default Limits
+Instances only Supported on VPC : C4 R4 I3 M4 P2 T2 X1 (CRIMPTX)
+VPC/region - 5
+subnets/VPC - 200
+Elastic IP Address/region - 5
+Flow Logs/single network interface, subnet, vpc - 2 - Can have a 6 flow logs per network interface if there are 2 for subnet,2 for VPC in the n/w iface resides
+Customer Gateways/region - 50
+Egress-only IGW/region - 5 - Same as the limit on VPC
+IGW/region - 5 - Same as the limit on VPC
+NAT GW / AZ - 5
+Virutal private Gateways /region - 5 - only 1 vpgw can be attached to a VPC
+NACL - 200 - not same as rules in the ACL
+RUles /NACL - 20 (inbound 20 /Outbound 20)
+N/w Interfaces /instance - NIL
+N/W Interfaces /region - 350
+Route Tables/VPC - 200 - one route table can span many subnets
+routes/route table - 50
+BGP advertised/route table - 100
+Security Group /VPC/region - 500 in classic, 100 in default and non-default VPC
+inbound/outbound rules /SG - 50
+SG /network interface - 5
+VPC peering /VPC - 50
+Outstanding VPC - 25
+VPN /region - 50
+VPN/VPC -10
+===========================================================================================================================================================================
+EC2:
+
+
+EC2 instance Monitoring metrics out of the box
+-CPU
+-Disk
+-Network
+-Status
+
+--> EC2 - No automated backups
+--> TO COPY AN AMI --> LAUNCH PERMISSIONS,S3 BUCKET PERMS AND USER DEFINED TAGS MUST BE MANUALLY COPIED
+
+Ec2 instance types:
+Gen Purpose: T,M
+Compute optimized : C
+Storage optimized: D,I
+Memory Optimized: R,X
+GPU instance: G
+GPU compute: P
+
+T2 Instances:
+- Must be launched in HVM AMI
+- Must be in a VPC, no classic
+- Must be using a EBS Root volume
+- Only on-demand, reserved instances, NOT AVAILABLE in SPOT or DEDICATED
+- CPU Credits: Measured by performance of full CPU core for one minute. 1vCPU at 100% util for 1 minute or 1vCPU at 50% for 2 mins or 2 vCPU at 25% for 2 min.
+- Provides base line CPU performance, with ability to burst above base line
+
+EARNING CPU CREDITS:
+-- T2 instances starts at a healthy CPU credit, then at millisecond level receives a set rate of CPU credits/hour and is stored for a period of 24 hours
+-- To calculate base CPU util -> divide the combined vCPU % by number of vCPU's
+-- Eg: t2.large base is 60% and has 2 vcpus..so in cloudwatch CPU Metrics is shown as 30%
+-- Use CPUCreditUsage and CPUCreditBalance metrics
+
+
+Resizing Instances:
+- If instances are backed by EBS, simply change the instance type desired
+- If instance store vol are used, migrate apps to a new instance desired
+- only resize if the current and new instances are compatible
+-- Virtualization: PV or HVM cannot be interchanged
+-- Network: EC2-Classic and VPC supported instances cannot be interchanged
+-- Platform: 32bit and 64 bit instances cannot be interchanged.
+- Steps to resize an EBS backed instance
+-- instance moved to new h/w
+-- pub IP released, priv IP, ElasticIP and IPv6 retained
+-- you need to suspend autoscaling, so it stops spawning new instances
+- Steps to resize an Instance-store instance
+- Backup data to persistent storage.Take snapshot
+- Create an AMI for instance store (http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/create-instance-store-ami.html)
+-- Install AMI tools
+-- Install AWS CLI
+-- Create a S3 bucket to hold the data
+-- Use your account ID
+-- A corresponding x509 cert and its private key, which is used to encrypt and decrypt the AMIs
+-- Account access ID and Secret key
+
+
+
+
+
+
+
+
+
+Placement Groups:
+- Logical grouping of instances within a SINGLE AZ
+- Benefits: Low latency and high network throughput
+- Only instances with Enhanced Network support can be put in a placement group
+- Can't span multiple AZ's
+- Max network throughput of trafficc between 2 instances are limited by the slower of the 2 instances
+- https://aws.amazon.com/ec2/instance-types/#instance-type-matrix --> use this link to work out the Networking performace of an instance.-
+- To achieve high n/w throughput use a 10-20 Gbps supported instance
+- To move between placement grps -> terminate it in one and relaunch in the other
+- Can span peered VPC's
+- Must use Private IP's to maintain the traffic requirements, using Public IP reduces it to 5Gbps
+- Traffic outside placement grp is also limited to 5Gbps
+
+Enhanced Networking:
+- Instances with Intel82599 Virtual Function interface -> provides upto 10gbps, supported by C3,C4,D2,I2,R3,M4
+- Instances with Elastic network Adapter (ENA) -> provides 20 Gbps, supported by I3,P2,R4,X1.
+- http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html
+
+Some instances are not available in Ec2-Classic, but only available in a VPC
+C4,M4,P2,R4,T2,X1
+
+
+EBS Volume Types and usage
+
+GP2:
+- gen purpose
+- Vol size: 1GB-16TiB
+- IOPS/Vol: 10,000, Max iops/Instance - 65,000, max throughput/vol ->160 MB/s
+
+IO1:
+- Provisioned IOPS SSD
+- 4GB-16 TB
+- max iops/Vol: 20,000,Max iops/Instance - 65,000, max throughput/vol ->320 MB/s
+
+ST1:
+- Throughput Optimized
+- 500GB - 16TB
+- max iops/Vol: 500,Max iops/Instance - 65,000, max throughput/vol ->500 MB/s
+-cannot be a boot vol
+
+SC1:
+- Cold HDD
+- 500GB - 16TB
+- max iops/Vol: 250,Max iops/Instance - 65,000, max throughput/vol ->250 MB/s
+-cannot be a boot vol
+
+Notes:
+
+1. VPC's can be /28 to /16 netmask subnets -> which is 16 to 65536 IPv4, VPC sizes cannot be changed once created. To alter, create a larger VPC, take images of instances and launch them in the larger vpc
+
+2. First 4 and last IP addr are reserved for AWS use. eg: 10.0.0.0 - Network address, .1 -> VPC router, .2-> DNS base of the VPC,.3 -> future use, .255 -> broadcast
+
+3.Tenancy - Dedicated -> is single-tenant ,default -> shared,host -> isolated server, cannot change tenancy of default, after ec2 instances launched. only change is from dedicated <-> host. VPC tenancy -> default (shared), dedicated.
+
+4.
+
+
+EC2 EBS and Instance Store
+Data persistence: Boot EBS vol is deleted on termination, while extra ebs volumes persist, can be in stopped state. Instance store is only valid during the lifecycle of the instance, no data persistence on termination of instance.Cannot be in stopped..has to be terminated
+
+
+-SNAPSHOTS ARE TAKEN IN REAL TIME WHEN ATTACHED AND IS IN USE.
+-ONLY DATA WRITTEN TO EBS IS SNAPSHOTTED, LOCAL CACHE IS NOT
+-FOR CONSISTENT SNAPSHOT, DETACH VOL AND THEN ISSUE THE SNAPSHOT ACTION
+-FOR ROOT VOL SNAPSHOT,SHUTDOWN THE INSTANCE
+-ACCESS SNAPSHOTS BASED ON UNIQUE ID FOR POINT IN TIME RECOVERY
+
+- PRE-WARMING EBS VOLUMES
+-- for empty disks, perform write on all data blocks
+-- for snapshots, perform read of all data blocks
+
+CLOUDWATCH
+
+- Metrics when disabled can be accessed upto 2 weeks
+
+===========================================================================================================================================================================
+
+To prewarm ELB
+- Start and end dates of high traffic
+- expected req rate per second
+- total size of typical request/response
+
+
+
+ELB Best practice
+ - Pre-warming the ELB in situations where a planned increase in traffic is expected. Contact AWS providing
+	-- Start and end times and dates
+	-- Req rate per sec
+	-- total size of req/response
+ - Conn timeouts: ensure instances to have ide timeout of 60 secs, where ELB will close the idle conns after 60 secs.If timeouts are not configured ELB might incorrectly identify the instance as unhealthy and stop traffic to it
+
+
+===========================================================================================================================================================================
+
+AWS Storage
+
+S3:
+
+S3 Std - general purpose frequent access data
+S3 Std-IA - long lived less frequent access
+
+S3 Multipart Upload
+- Improved throughput
+- Quick recovery from Network issues
+- Pause and resume uploads
+- begin upload before the final object size is known
+
+
+S3 permission types
+READ -> BucketLevel:ListBucket,ListBucketVersions,ListBucketMultipartUploads --> Object level: GetObj, getObjVersion, GetObjTorrent
+WRITE -> BucketLevel: PutObj, DeleteObj --> Obj level : N/A
+READ_ACP -> BL: GetBucketAcl -->OL: GetObjAcl,GetObjVersionAcl
+WRITE_ACP -> BL: PutBucketAcl --> OL: PutObjAcl, PutobjVersionAcl
+FULL_CONTROL -> ALL
+WRITE_TAG: BL: N/A OL:PutObjTagging,Putobjversiontagging
+READ_TAG: BL: N/A OL:GetObjectTagging
+
+
+
+Presigned URL: Means authenticatting the url by passing query params with the url. This can be used to auto expire the url after a given date
+[http://docs.aws.amazon.com/AmazonS3/latest/API/sigv4-query-string-auth.html]
+Query String params:
+--> x-amz-algorithm: for AWS4  AWS4-HMAC-SHA256 or HMAC-SHA256
+--> x-amz-credential: <your access id>/date/region/service(s3)/aws4_request
+--> x-amz-date: format yyyyMMddTHHmmssZ
+--> x-amz-expires : integer value in secs 86400(24 hrs)
+--> x-amz-signedHeaders: HTTP host header
+--> x-amz-Signature: Provides the signature to authenticate your request. This signature must match the signature Amazon S3 calculates; otherwise, Amazon S3 denies the request.
+
+S3 bucket Req Headers
+- Cache Control
+- Content-Disposition
+- content-length
+- content-encoding
+- content-md5
+- content-type
+- expect
+- expires
+- x-amz-storage-class
+- x-amz-tagging
+- x-amz-meta-
+- x-amz-website-redirect-location
+
+S3 CORS
+
+- Existing obj are not replicated, its only the new objects after enabling CORS
+- src and dest must enable VERSIONING
+- src and dest in diff regions
+- src to only 1 dest bucket
+- if src bucket owner also owns the obj, he has full perms. If not S3:GetObjectVersion & S3:GetObjectVersionACL perms should be provided
+- if src and dest are in diff accounts, src owner should have perms to replicate to dest and dest will allow this with dest bucket policy
+- For CORS on diff accounts - https://docs.aws.amazon.com/AmazonS3/latest/dev/crr-walkthrough-2.html
+
+
+S3 Access Logs
+- log details include Requester,bucketname,request time,req action,response status,error code
+
+S3 Encryption:
+S3-ServerSideEncryoption S3-SSE
+S3-KMS
+S3-C
+Client side library
+
+
+S3 Common HTTP Error codes
+
+409 Conflict - Bucket Already Exists,bucket not empty- deleting it
+
+
+
+===========================================================================================================================================================================
+
+SQS
+
+- Decoupling components of an app
+- configure individual message delay
+- dynamically increase throughput at read time and concurrency - A work Q can be added with more consumers to clear backlog
+- No preprovisioning required
+- scaling transparently
+
+Features
+- Redundant infra
+- Access control -> configure who can send/receive messages
+- variable message size -> can be upto max 256KB, the messages can be stored in S3,DynamoDB etc, msgs can be split to smaller chunks
+- multiple producer/consumers
+- per Q config settings
+- delay q's -> the def dealy in q can be set to enquque messages to a fixed period
+- pci compliance -> can store and process credit card data
+
+
+
+Q types
+- Std Qs
+-- high throughput -> unlimited trans per second (TPS)
+-- at-least-once delivery
+-- Best effor ordering
+-- default short polling -> based on how sqs sample messages across distributed servers.in frequent consumption, all msgs will eventually be delivered.
+-- Long polling -> reduces costs of using sqs.Allows to wait for msgs to be available in the Q.Setting WAITTIMESECONDS achieves this. WAITTIMESECONDS=0 for short polling or 1-20 for long polling. (ReceiveMessageWaitTime)
+
+- FIFO Qs
+-- Order strictly maintained
+-- Exactly once only delivery
+-- limited throughput - 300 tps
+-- FIFO Q Logic
+    - DeduplicationID -> a token is used for dedup of sent messages,once sent, a msg with same dedupID is accepted successfully, but never delivered in the 5 min default interval. To set it up you must -> enable content-based dedup (uses sha256 to gen dedupID using msg body-not attrib) or explicitly provide dedupID
+
+    - MessageGroupID ->a tag that specifies that msg belong to a specific grp.(is a must for successful delivery)
+    - ReceiveRequestAttemptID -> the token used for dedup of ReceiveMsg calls
+    - Seq number
+MsgDedupID and ReceiveRequestAttemptID  are used in retrying mutliple times action
+- For a producer that gets a failed SendMessage, it can retry with same dedupID,before it receives an ack before dedup interval expires
+- For a consumer that gets a failed ReceiveMessage,it can retry with same ReceiveRequestAttemptID ,before it gets an ack before visibility timeout expires
+
+Compatible Services with FIFO
+-Cloudwatch
+-SNS topics
+-autoscaling events
+-s3 events
+-lamda dlq
+-iOT rule actions
+
+MOVING FROM A STD TO FIFO QUEUE
+-cannot convert std to fifo..need to recreate q as fifo and del std
+
+CHECKLIST FOR STD TO FIFO Q
+- fifo dont support per-msg delays only per-q delays, if using DelaySeconds on a msg, reapply it to entire queue instead
+- every msg needs a msggrpID.
+
+
+Visibility Timeout
+-def is 30 secs
+-msgs are not deleted when a consumer receives and process the msgs. to stop other consumers from receiving the message set the visibility timeout
+
+Delay Queues
+- time to delay the delivery of messages
+- 0-900 secs (15 mins)
+- Std q -> delay seconds changes are not retroactive, means does not apply to msgs already in the q
+- fifo q - is retroactive, means does apply to msgs already in the q
+
+Diff b/w Delay Q and visibility timeout -> delay Q hides the messages for a fixed time before delivery, whereas visi timeouts-> messages are hidden only after its consumed from the queue
+===========================================================================================================================================================================
+
+Cloud Best Practices Notes:
+
+Stateless Apps: Apps that do not require to store session data and that does not need to share session data in the event of spinning up new instances
+
+Stateless components:
+- Store session cookies in DymanoDB rather than on a clients browser
+- Larger files stored in S3 or EFS
+- multi workflow in SWF
+
+Stateful Components:
+- DB are stateful
+- For web apps relying on the compute resource uses sticky sessions, which has a limitation while sclaing the environment or termination of the compute resource, the user session is lost.
+- ELB's provide session stickiness
+
+Distributed processing:
+- batch jobs are broken to small parts and run simultaneously in services like hadoop- use EMR on top of EC2
+
+Hybrid:
+- EBeanStalk provides hybrid model.
+- BS can provide pre configured AMI and also runs bootstrap actions from .ebextensions
+
+Ec2 Auto recovery:
+- Recover impaired instances
+- create a cloud watch alarm for StatusCheck_system
+- Only available on C3,C4,M3,R3,T2 or X1, that they run on a VPC, uses shared tenancy,and only EBS volumes - NO INSTANCE STORE
+- No extra charge
+
+Site-Site VPN : You must have a VPC with Hardware VPN Access, an on-premise Customer Gateway, and a Virtual Private Gateway to make the VPN connection work.
+Loose coupling components in the Architecture:
+
+- reducing interdependencies in the arch
+
+Well defined interfaces:
+- use API Gateway
+
+Service Discovery:
+- use ELB with DNS and private DNS zones
+- Another option is service registration and discovery to allow to retrieve the endpoint IP and port
+- can use custom health checking and scripts calling API's or use opensource tools like Netflix Eureka,Anibnb Synapse or HashiCorp Consul
+
+Aysnc Integration:
+- use in situations where immediate response is not req, but just the ack .
+- events triggered and that are consumed by SQS or Kinesis that notify appropriate resources to take action
+
+Graceful Failure:
+- When a system fails, introduce client retries or store them in a Q for later, or cache them in CloudFront for webapps.
+- In DB failure,use a backup site
+- Use exponential backoff and Jitter strategy
+
+Managed Services by AWs
+- S3
+- DynamoDB
+- SQS
+- RedShift - DataWarehousing
+- CloudFront - CDN
+- CloudSearch - Log analytics, click stream searching
+- Elastic Transcoder - Transcode video files to diff formats
+- SES - Email Services
+- SWF - WorkFlow Service
+
+Data storage:
+
+- Data replication on DB servers
+- Sync replication where all replicas are to be in sync before the failover happens
+- Async replication, introduces replication lag and for systems where the lag is acceptable
+- Amazon Dynamo introduces Quorum based replication that combines sync and async replications. It defines a min number of nodes to particiapte in the write operation
+===========================================================================================================================================================================
+
+Encrypting Data at Rest Notes:
+
+- Use KMI (Key mgmt Infra)
+- Keys can be located within AWS or on-premise
+- S3
+-- encrypt using openssl or bouncy castle .
+-- PUT and GET using the S3 API
+-- Alternatively use AWS S3 encryption client,leveraging JCE
+-- you control security,AWS never has access to keys
+-- 3rd party tools - CloudBerry backup and explorer pro both offer client side encryption, SafeNet protectApp with aws sdk ( these tools can be on-premise or on aws)
+
+- EBS
+-- can use linux encrypt tools like LUKS,or trueccrypt or dm-crypt, that uses kernel space drivers and it encrypts all data on the volume.
+-- can also use filesystem encryption using ecryptfs and EncFS, that can encrypt specific directories.
+-- CAN ONLY ENCRYPT DATA VOLUMES
+-- AWS EBS BOOT VOLUMES CANNOT BE ENCRYPTED USING THESE METHODS, DUE TO THE TOOLS NOT ALLOWING TO AUTOMATICALLY MAKING THE KEYS AVAILABLE AT BOOT TIME
+-- 3rd party tools - TrendMicro SecureCloud and SafeNet ProtectV allows encrypting both boot and data volumes
+
+--ENCRYPTING AND DECRYPTING DATA VOLUME NOTES
+---  Migrating a encrypted volume to an unencrypted volume, AWS transparently does this, no extra effort required
+---->Steps: 1.create dest vol (enc or not depends on the need),2. Attach it to ec2 instance, 3. Mount the new vol, 4. copy data b/w src and dest using bulk copy tools like rsync
+
+--- To encrypt a vol that was previously unencrypted
+---->1.Create a snapshot of unencrypted vol,2.copy the snapshot, and while copying apply encryption params, 3. Restore the encrypted snapshot
+
+
+
+-- Storage Gateway is presented as an iSCSI disk to on-premise storage, that connect on-premise s/w appliance to S3.
+--> Encrypts data in transit to and from AWS via ssl
+--> All data and snapshot data encrypted with AES-256 at rest for cahced,stored and VTL
+--> Authentication is via CHAP (Challenge-Handshake Auth protocol)
+-->Use s3 policies,openssl,or system tools(luks,truecrypt etc)
+--Types: G/w-cached: holds data in S3 while storing frequently accessed data locally in cache, can create upto 32TiB, each g/w has upto 20 volumes with max 150TiB
+--G/W-Stored: stores data locally, aync'ly backing up to S3 in the form of EBS snapshots.max size 1TiB, with 12 volumes upto 12TiB
+--G/w-VTL: provides offline data archive with ISCSI-based VTL,consisting of virtual tapes and virtual media changer.
+-->virtual tape can  upto 100GiB-2.5TiB, holds upto 1500 tapes with max aggregate capacity 150TiB.
+-->Once tapes are created the backup application can discover it via std media inventory and made available immediately and stored in S3.
+--> Frequent accessed data is in VTL,while infrequent data is in VTS(virtual tape shelf) in Glacier to reduce costs
+
+-- RDS : As RDS volumes are not available to the user to encrypt, selective encryption of fields can be done using openssl etc.Use of Hash key using HMAC(hash message auth code)to protect fields in the application that updates the database.
+-- EMR: data is encrypted at 4 distinct points -> source data,hadoop distributed FS(HDFS), Shuffle phase,output data
+
+- CloudHSM: an alternate source to key storage.
+-- can generate and store keys, do encrypt/decrypt operations. DOES NOT perform life-cycle mgmt like key rotation or control policy
+-- keys cannot be restored once lost
+
+- KMS
+-- aws provided key mgmt. full product that manages, key rotation,master keys
+-- Uses envelope encryption
+--- Key Gen -> Data key + plain data -> encrypt data
+--- data key + key-encrypting unique key -> encrypted data key
+--- encryted data + encrypted data key -> stored in aws storage
+
+-- S3 types of encryption -> S3-SSE(Server Side Encrypt), S3-KMS,S3-C(Customer provided keys)
+
+===========================================================================================================================================================================
+
+CLOUD WATCH
+
+- CANNOT AGGREGARTE ACROSS REGIONS
+- To send logs to cloud watch the log agent needs to be installed on the servers
+- awslogs is a rpm package that installs the agent on linux
+- Log agent has the following - plugin in cli that pushed log data, script daemon "aws logs push",or a cron job
+- Metric filters must be alphanumeric or start with '_', to exclude use '-'
+- Log retention period - 1 min datapoints - 15 days, 5 min datapoints - 63 days, 1hr datapoints - 455 days
+- If longer retention is reqd use GetMetricSatisticsAPI to store it in a diff storage
+- Metrics CANNOT be deleted, but only expire based in retention schedule
+- Custom metric can be done by PutMetricData API
+- Cloudwatch agent sends data every 5 seconds, but is changeable
+- Can only send text data as a log.Non-text not Allowed
+- CLI, API, Cloudwatch logs agent
+- CloudFormation can incorporate cloudwatch
+- Metrics - expire after 14 days, time ordered data point
+- Each metric has Name, Namespace, Dimensions
+- Avg, Min,Max, Sum, Samplecount - Statistics
+- Min 60 Secs
+- Dimesion - provide name/value pair to uniquely identify metric AZ and LB Dimension
+- Logs
+-- Log Event - activity being reported, has a timestamp and raw message in UTF-8
+-- Log Stream - is a sequence of log events from the same source
+-- Log group - grouping of log streams
+-- Metric Filters
+--Retention Policy
+-- Log Agent
+
+- ELB Metrics
+-- BackendConnectionErrors
+-- HealthyHostCount, unhealthyHostCount
+-- HTTP Backend 3xx,4xx,5xx
+-- Latency
+-- ReqCount
+--SurgeQueueLength
+-- SpillOverCount
+
+- ELB Logging - default turned off, when on writes to s3 bucket of the format logfile name:
+<bucket/[prefix]/AWSLogs/<account-id>/elasticloadbalancing/<region>/<yyyy>/<mm>/<dd>/<account-id>_elasticloadbalancing_<region>_<lb_name>_<end_time>_<ip_addr>_<random_string>.log
+- AWS provides the logs only on best effort
+
+- Log Entries are of the format
+timestamp elb client:port backend:port request_processing_time backend_processing_time response_processing_time elb_status_code backend_status_code received_bytes sent_bytes "request" "user_agent" ssl_cipher ssl_protocol
+
+
+
+DR and Recovery
+- RTO - Recovery Time objective - time taken to restore to full prod version from the start of disaster
+- RPO - Recovery Point Objective - acceptable restore point where the data missing is admissable
+- Types:
+-- Backup and restore
+-- Pilot Light - Always have the essential service running eg. RDS in multiAZ [ELASTIC NETWORK INTERFACES with preconfigured MAC ADDR]
+-- Warm Standby - A scaled down version of the entire Environment always running
+-- Multi-Site - systems running on both aws and corporate DC
+
+Automated Backups
+- RDS - AUTOMATED SNAPSHOTS ARE LOST WHEN DB INSTANCE IS DELETED
+- ElasticCache (Redis only)
+- Redshift
