@@ -532,7 +532,7 @@ Delay Queues
 - Std q -> delay seconds changes are not retroactive, means does not apply to msgs already in the q
 - fifo q - is retroactive, means does apply to msgs already in the q
 
-Diff b/w Delay Q and visibility timeout -> delay Q hides the messages for a fixed time before delivery, whereas visi timeouts-> messages are hidden only after its consumed from the queue
+Diff b/w Delay Q and visibility timeout -> delay Q hides the messages for a fixed time before delivery, whereas visi timeouts-> messages are hidden only after its consumed from the queue,so its not visible to other consumers
 ===========================================================================================================================================================================
 
 Cloud Best Practices Notes:
